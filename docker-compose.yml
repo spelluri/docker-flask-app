@@ -3,4 +3,4 @@ services :
   web :
      image : "dockermanga/my-flask-app:$BUILD_NUMBER"
      ports :
-         - "8000:8000"
+         - "8001:8001"
