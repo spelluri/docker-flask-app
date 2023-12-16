@@ -1,29 +1,34 @@
 pipeline {
-    agent any 
-    environment {
-    DOCKERHUB_CREDENTIALS = credentials('amonkincloud-dockerhub')
-    }
-    stages { 
-
-        stage('Build docker image') {
-            steps {  
-                sh 'docker build -t ylmt/flaskapp:$BUILD_NUMBER .'
+    agent any
+    stages{
+        stage("code"){
+            steps {
+                echo "Cloning the code"
+                git branch: 'main', url: 'https://github.com/spelluri/docker-flask-app.git'
             }
         }
-        stage('login to dockerhub') {
-            steps{
-                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+        stage("build") {
+            steps {
+                echo "building code and docker image"
+                sh "docker build -t my-flask-app ."
             }
         }
-        stage('push image') {
-            steps{
-                sh 'docker push ylmt/flaskapp:$BUILD_NUMBER'
+        stage("login and push") {
+            steps {
+                echo "dockerhub login and pushing the imahe to dockerhub"
+                withCredentials([usernamePassword(credentialsId:"dockerhub",passwordVariable:"dockerhubPass1",usernameVariable:"dockerhubUser1")]){
+                    echo "Print dockerhub username ${env.dockerhubUser1}"
+                    sh "docker tag my-flask-app ${env.dockerhubUser1}/my-flask-app:$BUILD_NUMBER"
+                    sh "docker login -u ${env.dockerhubUser1} -p ${env.dockerhubPass1}"
+                    sh "docker push ${env.dockerhubUser1}/my-flask-app:$BUILD_NUMBER"
+                }
             }
         }
-}
-post {
-        always {
-            sh 'docker logout'
+        stage("deploy") {
+            steps {
+                echo "deploying the container"
+                sh "docker-compose down && docker-compose up -d"
+            }
         }
     }
 }
